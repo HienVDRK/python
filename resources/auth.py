@@ -27,8 +27,15 @@ def login():
     expires = datetime.timedelta(days=7)
     access_token = create_access_token(identity=({ 
         'role' : user['role'],
-        'username' : user['username']}), expires_delta=expires)
-    return {'token': access_token}, 200 
+        'username' : user['username']
+    }), expires_delta=expires)
+    return {
+        'token': access_token,
+        'username': user.username,
+        'email': user.email, 
+        'password': user.password,
+        'role': user.role
+    }, 200 
     
 
 @user_blueprint.route('/users')
