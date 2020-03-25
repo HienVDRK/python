@@ -10,7 +10,7 @@ class account_bank(db.Document):
     gender = db.StringField(required=True)
     address = db.StringField(required=True)
     employer = db.StringField(required=True)
-    email = db.StringField(required=True)
+    email = db.StringField(required=True, unique=True)
     city = db.StringField(required=True)
     state = db.StringField(required=True)
     
