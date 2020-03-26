@@ -16,43 +16,15 @@ account_blueprint = Blueprint('accounts', __name__)
 def searchAccount():
   accounts = mongo.db.account_bank
   query_params = request.args
-  print('query_params',query_params)
   output = []
-  page_size = int(10)
-  page_index = int(0)
+  page_size = int(query_params.get('page_size'))
+  page_index = int(query_params.get('page_index'))
   skips = page_size * page_index
-  order_by = 'account_number'
-  order_direction = -1
-  
-  
-  # account_number = int('56')
-  # balance = int(query_params.get('balance'))
-  # firstname = query_params.get('firstname')
-  # lastname = query_params.get('lastname')
-  # age = int(query_params.get('age'))
-  # gender = query_params.get('gender')
-  # address = query_params.get('address')
-  # employer = query_params.get('employer')
-  # email = query_params.get('email')
-  # city = query_params.get('city')
-  # state = query_params.get('state')
-  # 
-  where = ({
-    'account_number': account_number,
-    # 'balance': {'$eq': balance},
-    # 'firstname': {'$regex': firstname, '$options': 'i'},
-    # 'lastname': {'$regex': lastname, '$options': 'i'},
-    # 'age': {'$eq': age},
-    # 'gender': {'$regex': gender,'$options': 'i'},
-    # 'address': {'$regex': address, '$options': 'i'},
-    # 'employer': {'$regex': employer,'$options': 'i'},
-    # 'email': {'$regex': email, '$options': 'i'},
-    # 'city': {'$regex': city, '$options': 'i'},
-    # 'state': {'$regex': state, '$options': 'i'}
-  })
+  order_by = query_params.get('order_by')
+  order_direction = int(query_params.get('order_direction'))
+  query = json.loads(query_params.get('query'))
 
-  
-  data = accounts.find(query_params).sort(order_by, order_direction).skip(skips).limit(page_size)
+  data = accounts.find(query).sort(order_by, order_direction).skip(skips).limit(page_size)
   total = data.count()
   for account in data:
     output.append({
@@ -61,7 +33,7 @@ def searchAccount():
       'email' : account['email'], 'city' : account['city'], 'state' : account['state']
     })
   return jsonify({
-    'success': 1,
+    'success': "true",
     'data': output,
     'total': total,
     'page_size': page_size,
@@ -79,8 +51,9 @@ def get_accounts():
 @account_blueprint.route('/accounts/<id>')
 # @jwt_required
 def get_accounts_by_id(id):
-    accounts = account_bank.objects.get(id=id).to_json()
-    return accounts 
+  print(id)
+  accounts = account_bank.objects.get(account_number=id).to_json()
+  return accounts 
 
 @account_blueprint.route('/accounts', methods=['POST'])
 @jwt_required
@@ -90,6 +63,7 @@ def add_account():
         role = getjwt['role']
         if role == 'admin':
           body = request.get_json()
+          print('add', body)
           acc_bank = account_bank(**body).save()
           id = acc_bank.id
           return {
@@ -110,10 +84,19 @@ def add_account():
       }, 400
       
     except NotUniqueError:
-      return {
-        'message' : str('Account number already exists'),
-        'status' : 400 
-      }, 400
+      body = request.get_json()
+      account = account_bank.objects(account_number=body['account_number'])
+      email = account_bank.objects(email=body['email'])
+      if account:
+        return {
+          'message' : str('Account number already exists'),
+          'status' : 400 
+        }, 400
+      elif email:
+        return {
+          'message' : str('Email already exists'),
+          'status' : 400 
+        }, 400
       
     except Exception:
       return {
@@ -130,7 +113,7 @@ def update_account(id):
       role = getjwt['role']
       if role == 'admin':
         body = request.get_json()
-        account_bank.objects.get(id=id).update(**body)
+        account_bank.objects.get(account_number=id).update(**body)
         return {
           'message' : str('Update account successfully'),
           'status' : 200 
@@ -167,7 +150,7 @@ def delete_account(id):
       getjwt = get_jwt_identity()
       role = getjwt['role']
       if role == 'admin':
-        account_bank.objects.get(id=id).delete()
+        account_bank.objects.get(account_number=id).delete()
         return {
           'message' : str('Delete account successfully'),
           'status': 200
